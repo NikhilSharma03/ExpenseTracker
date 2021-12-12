@@ -1,0 +1,1 @@
+protoc --proto_path=proto expense.proto --go_out=plugins=grpc:.

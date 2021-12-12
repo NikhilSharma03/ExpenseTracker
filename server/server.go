@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 
+	"github.com/NikhilSharma03/expensetracker/server/expensepb"
+	"github.com/NikhilSharma03/expensetracker/server/service"
 	"google.golang.org/grpc"
 )
 
@@ -14,7 +17,8 @@ func main() {
 	}
 
 	gRPCServer := grpc.NewServer()
-
+	expensepb.RegisterExpenseServiceServer(gRPCServer, &service.ExpenseServer{})
+	fmt.Println("Starting gRPC Server...")
 	if gRPCServer.Serve(lis); err != nil {
 		log.Fatal("Something went wrong", err.Error())
 	}
