@@ -2,8 +2,13 @@ package service
 
 import (
 	"context"
+	"strconv"
 
+	"github.com/NikhilSharma03/expensetracker/server/db"
 	"github.com/NikhilSharma03/expensetracker/server/expensepb"
+	"github.com/go-redis/redis"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ExpenseServer struct {
@@ -21,7 +26,28 @@ func (*ExpenseServer) GetExpenseHistory(req *expensepb.Empty, stream expensepb.E
 }
 
 func (*ExpenseServer) GetBalance(ctx context.Context, req *expensepb.Empty) (*expensepb.User, error) {
-	return &expensepb.User{Balance: 100000.212}, nil
+	redisClient := db.GetRedisClient()
+	val, err := redisClient.Get("AMOUNT").Result()
+	switch {
+	case err == redis.Nil:
+		_, err := redisClient.Set("AMOUNT", 0, 0).Result()
+		if err != nil {
+			return &expensepb.User{}, status.Errorf(codes.Internal, err.Error())
+		}
+	case err != nil:
+		return &expensepb.User{}, status.Errorf(codes.Internal, err.Error())
+	case val == "":
+		_, err := redisClient.Set("AMOUNT", 0, 0).Result()
+		if err != nil {
+			return &expensepb.User{}, status.Errorf(codes.Internal, err.Error())
+		}
+	}
+	val, _ = redisClient.Get("AMOUNT").Result()
+	fVal, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		return &expensepb.User{}, status.Errorf(codes.Internal, err.Error())
+	}
+	return &expensepb.User{Balance: fVal}, nil
 }
 
 func (*ExpenseServer) AddExpense(ctx context.Context, req *expensepb.Transaction) (*expensepb.Transaction, error) {
