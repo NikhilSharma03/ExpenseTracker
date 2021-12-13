@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/NikhilSharma03/expensetracker/server/db"
@@ -16,10 +17,25 @@ type ExpenseServer struct {
 }
 
 func (*ExpenseServer) GetExpenseHistory(req *expensepb.Empty, stream expensepb.ExpenseService_GetExpenseHistoryServer) error {
-	data := []*expensepb.Transaction{{Type: "credit", Amount: 1000}, {Type: "credit", Amount: 2000}, {Type: "debit", Amount: 3000}, {Type: "debit", Amount: 3400.50}, {Type: "credit", Amount: 1000}}
+	redisClient := db.GetRedisClient()
+	data, err := redisClient.LRange("TRANSACTION", 0, -1).Result()
+	if err != nil {
+		return status.Errorf(codes.Internal, err.Error())
+	}
 
 	for _, item := range data {
-		stream.Send(item)
+		tranType := ""
+		if string(item[0]) == "+" {
+			tranType = "credit"
+		} else if string(item[0]) == "-" {
+			tranType = "debit"
+		}
+		fVal, err := strconv.ParseFloat(item, 64)
+		if err != nil {
+			return status.Errorf(codes.Internal, err.Error())
+		}
+
+		stream.Send(&expensepb.Transaction{Amount: fVal, Type: tranType})
 	}
 
 	return nil
@@ -27,6 +43,8 @@ func (*ExpenseServer) GetExpenseHistory(req *expensepb.Empty, stream expensepb.E
 
 func (*ExpenseServer) GetBalance(ctx context.Context, req *expensepb.Empty) (*expensepb.User, error) {
 	redisClient := db.GetRedisClient()
+
+	// Get Amount
 	val, err := redisClient.Get("AMOUNT").Result()
 	switch {
 	case err == redis.Nil:
@@ -42,6 +60,8 @@ func (*ExpenseServer) GetBalance(ctx context.Context, req *expensepb.Empty) (*ex
 			return &expensepb.User{}, status.Errorf(codes.Internal, err.Error())
 		}
 	}
+
+	// Get Amount again (in case a new value is initialized)
 	val, _ = redisClient.Get("AMOUNT").Result()
 	fVal, err := strconv.ParseFloat(val, 64)
 	if err != nil {
@@ -51,8 +71,62 @@ func (*ExpenseServer) GetBalance(ctx context.Context, req *expensepb.Empty) (*ex
 }
 
 func (*ExpenseServer) AddExpense(ctx context.Context, req *expensepb.Transaction) (*expensepb.Transaction, error) {
+	redisClient := db.GetRedisClient()
 	transactionType := req.Type
 	transactionAmount := req.Amount
+
+	// Get Amount
+	val, err := redisClient.Get("AMOUNT").Result()
+	switch {
+	case err == redis.Nil:
+		_, err := redisClient.Set("AMOUNT", 0, 0).Result()
+		if err != nil {
+			return &expensepb.Transaction{}, status.Errorf(codes.Internal, err.Error())
+		}
+	case err != nil:
+		return &expensepb.Transaction{}, status.Errorf(codes.Internal, err.Error())
+	case val == "":
+		_, err := redisClient.Set("AMOUNT", 0, 0).Result()
+		if err != nil {
+			return &expensepb.Transaction{}, status.Errorf(codes.Internal, err.Error())
+		}
+	}
+
+	// Get Amount again (in case a new value is initialized)
+	val, _ = redisClient.Get("AMOUNT").Result()
+	fVal, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		return &expensepb.Transaction{}, status.Errorf(codes.Internal, err.Error())
+	}
+
+	// Do Expense Calculation
+	if transactionType == "credit" {
+		_, err := redisClient.LPush("TRANSACTION", "+"+fmt.Sprint(transactionAmount)).Result()
+		if err != nil {
+			return &expensepb.Transaction{}, status.Errorf(codes.Internal, err.Error())
+		}
+
+		latestAmount := fVal + transactionAmount
+
+		_, erro := redisClient.Set("AMOUNT", latestAmount, 0).Result()
+		if erro != nil {
+			return &expensepb.Transaction{}, status.Errorf(codes.Internal, err.Error())
+		}
+	} else if transactionType == "debit" {
+		_, err := redisClient.LPush("TRANSACTION", "-"+fmt.Sprint(transactionAmount)).Result()
+		if err != nil {
+			return &expensepb.Transaction{}, status.Errorf(codes.Internal, err.Error())
+		}
+
+		latestAmount := fVal - transactionAmount
+
+		_, erro := redisClient.Set("AMOUNT", latestAmount, 0).Result()
+		if erro != nil {
+			return &expensepb.Transaction{}, status.Errorf(codes.Internal, err.Error())
+		}
+	} else {
+		return &expensepb.Transaction{}, status.Errorf(codes.Internal, "Invalid transaction type")
+	}
 
 	return &expensepb.Transaction{Amount: transactionAmount, Type: transactionType}, nil
 }
