@@ -7,13 +7,6 @@
 
 </div>
 
-<div align="center">  
-<br>
-
-<img width=100% src="https://github.com/NikhilSharma03/DevMind/blob/main/assets/docs.png"></p>
-
-</div>
-
 <br>
 
 <h3 align="center"> ExpenseTracker is an CLI :computer: application build with Cobra Go🚀 to help managing your expenses :dollar: </h3>
