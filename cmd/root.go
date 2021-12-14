@@ -2,14 +2,20 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
+	"github.com/NikhilSharma03/expensetracker/server/expensepb"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
 
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
+
+var gRPCClient *grpc.ClientConn
+var expenseClient expensepb.ExpenseServiceClient
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -35,6 +41,12 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	var err error
+	gRPCClient, err = grpc.Dial(":8080", grpc.WithInsecure())
+	if err != nil {
+		log.Fatal("Something went wrong", err.Error())
+	}
+	expenseClient = expensepb.NewExpenseServiceClient(gRPCClient)
 }
 
 // initConfig reads in config file and ENV variables if set.
