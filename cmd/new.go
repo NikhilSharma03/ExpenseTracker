@@ -1,8 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"strconv"
+	"strings"
 
+	"github.com/NikhilSharma03/expensetracker/server/expensepb"
 	"github.com/spf13/cobra"
 )
 
@@ -31,12 +36,29 @@ Example:
 		}
 
 		if credit != "" {
-			fmt.Println("Credit called", credit)
+			cfVal, erro := strconv.ParseFloat(credit, 64)
+			if erro != nil {
+				log.Fatal("Something went wrong", erro.Error())
+			}
+
+			res, err := expenseClient.AddExpense(context.Background(), &expensepb.Transaction{Type: "credit", Amount: cfVal})
+			if err != nil {
+				log.Fatal("Something went wrong", err.Error())
+			}
+			fmt.Println("Successful", "Amount:", res.GetAmount(), "Type:", strings.ToUpper(res.GetType()))
 			return
 		}
 
 		if debit != "" {
-			fmt.Println("Dredit called", debit)
+			dfVal, erro := strconv.ParseFloat(debit, 64)
+			if erro != nil {
+				log.Fatal("Something went wrong", erro.Error())
+			}
+			res, err := expenseClient.AddExpense(context.Background(), &expensepb.Transaction{Type: "debit", Amount: dfVal})
+			if err != nil {
+				log.Fatal("Something went wrong", err.Error())
+			}
+			fmt.Println("Successful", "Amount:", res.GetAmount(), "Type:", strings.ToUpper(res.GetType()))
 			return
 		}
 
