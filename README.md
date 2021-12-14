@@ -7,6 +7,14 @@
 
 </div>
 
+<div align="center">  
+<br>
+ 
+[![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=95)](https://github.com/NikhilSharma03/ExpenseTracker) 
+[![Build by Nikhil](https://img.shields.io/badge/Built%20by-Nikhil-Green)](https://github.com/NikhilSharma03/ExpenseTracker) 
+
+</div>
+
 <br>
 
 <h3 align="center"> ExpenseTracker is an CLI :computer: application build with Cobra Go🚀 to help managing your expenses :dollar: </h3>
