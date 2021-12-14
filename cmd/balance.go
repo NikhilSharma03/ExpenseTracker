@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"log"
 
+	"github.com/NikhilSharma03/expensetracker/server/expensepb"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +18,11 @@ var balanceCmd = &cobra.Command{
 Example:
 	expensetracker balance`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("balance called")
+		res, err := expenseClient.GetBalance(context.Background(), &expensepb.Empty{})
+		if err != nil {
+			log.Fatal("Something went wrong", err.Error())
+		}
+		fmt.Println("Current Balance:", res.GetBalance())
 	},
 }
 
