@@ -31,3 +31,25 @@ src="https://img.shields.io/badge/redis%20-%231572B6.svg?&color=red&style=for-th
 </div>
 
 <br>
+
+## Setup and Installation
+
+First build the application
+
+```
+go build
+```   
+
+and then install,
+
+```
+go install
+```   
+
+now use it,
+
+```
+expensetracker
+```   
+
+<br>
